@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Monitoring Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- For Graphs -->
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        .alert { color: red; font-size: 20px; font-weight: bold; }
+        
+        /* Making the canvas div smaller */
+        .chart-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        canvas {
+            max-width: 400px;
+            max-height: 250px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🔥 Real-Time Monitoring Dashboard 🔥</h1>
+    
+    <h2>⚡ Voltage: <span id="voltageValue">0</span> </h2>
+    <h2>🔌 Current: <span id="currentValue">0</span> </h2>
+    <h2>⚡ Power: <span id="powerValue">0</span> </h2>
+    <h2>🔋 Energy: <span id="energyValue">0</span></h2>
+    <h2>🌍 CO2 Emission: <span id="co2Value">0</span></h2>
+
+    <div class="chart-container">
+        <canvas id="voltageChart"></canvas>  <!-- Voltage graph -->
+        <canvas id="currentChart"></canvas>  <!-- Current graph -->
+    </div>
+
+    <p class="alert" id="alertMessage"></p>
+
+    <script type="module" src="cft.js"></script> <!-- Firebase Script -->
+</body>
+</html>

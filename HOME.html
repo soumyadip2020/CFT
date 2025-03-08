@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carbon Footprint Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-auth.js"></script>
+    <script src="HOME.js"></script>
+    <style>
+        :root {
+            --primary-green: #2e7d32;
+            --secondary-green: #4caf50;
+            --accent-green: #81c784;
+            --dark-green: #1b5e20;
+            --light-green: #c8e6c9;
+            --gradient: linear-gradient(135deg, var(--primary-green), var(--secondary-green));
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: var(--gradient);
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .background-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+            position: relative;
+            display: inline-block;
+        }
+
+        .title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50%;
+            height: 3px;
+            background: var(--accent-green);
+            border-radius: 2px;
+        }
+
+        .footprint-display {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .number {
+            font-size: 5rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #fff, var(--light-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        .unit {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+        }
+
+        .trend {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .trend-icon {
+            display: inline-block;
+            transform: rotate(45deg);
+            transition: transform 0.3s ease;
+        }
+
+        .trend:hover .trend-icon {
+            transform: rotate(45deg) scale(1.2);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 2rem 0;
+        }
+
+        .chart-container canvas {
+            border-radius: 15px;
+        }
+
+        .illustration {
+            text-align: center;
+            margin: 3rem 0;
+            position: relative;
+        }
+
+        .illustration svg {
+            max-width: 250px;
+            filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.2));
+            transition: transform 0.3s ease;
+        }
+
+        .illustration:hover svg {
+            transform: scale(1.05);
+        }
+
+        .nav-container {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+        }
+
+        .navigation {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            display: flex;
+            gap: 2rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-button {
+            background: none;
+            border: none;
+            color: var(--light-green);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .nav-button::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%) scaleX(0);
+            width: 20px;
+            height: 3px;
+            background: var(--accent-green);
+            border-radius: 2px;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-button:hover {
+            color: white;
+            transform: translateY(-3px);
+        }
+
+        .nav-button.active {
+            color: white;
+        }
+
+        .nav-button.active::after {
+            transform: translateX(-50%) scaleX(1);
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .floating-circles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .circle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 3s infinite ease-in-out;
+        }
+
+        .circle:nth-child(1) {
+            width: 100px;
+            height: 100px;
+            top: 10%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .circle:nth-child(2) {
+            width: 150px;
+            height: 150px;
+            top: 50%;
+            right: 15%;
+            animation-delay: -1s;
+        }
+
+        .circle:nth-child(3) {
+            width: 70px;
+            height: 70px;
+            bottom: 20%;
+            left: 20%;
+            animation-delay: -2s;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .number {
+                font-size: 3.5rem;
+            }
+
+            .navigation {
+                padding: 0.8rem 1.5rem;
+                gap: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background-pattern"></div>
+    <div class="floating-circles">
+        <div class="circle"></div>
+        <div class="circle"></div>
+        <div class="circle"></div>-*
+    </div>
+
+    <div class="container">
+        <header class="header">
+            <h1 class="title">My Footprint</h1>
+            <div id="userName" style="position: absolute; top: 20px; right: 10px; font-size: 1.5rem;">Hello, Guest</div>
+        </header>
+
+        <div class="glass-card">
+            <div class="footprint-display">
+                <div class="number" id="totalEmission">0</div>
+                <div class="unit">ton CO2/year</div>
+                <div class="trend">
+                    <span class="trend-icon">↗</span>
+                    <span id="trendText">+0% since last month</span>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="footprintChart"></canvas>
+            </div>
+        </div>
+
+        <!-- <div class="glass-card illustration">
+            <svg viewBox="0 0 200 200" width="200" height="200">
+                <style>
+                    .leaf { fill: var(--light-green); }
+                    .stem { stroke: var(--light-green); fill: none; stroke-width: 2; }
+                </style>
+                <g class="plant">
+                    <path class="stem" d="M100,180 C100,180 100,100 100,100 C100,80 120,60 140,60"/>
+                    <path class="stem" d="M100,140 C100,140 80,120 60,120"/>
+                    <path class="leaf" d="M140,40 C160,40 160,80 140,80 C120,80 120,40 140,40"/>
+                    <path class="leaf" d="M40,100 C40,120 80,120 80,100 C80,80 40,80 40,100"/>
+                </g>
+            </svg>
+        </div> -->
+    </div>
+
+    <div class="nav-container">
+        <nav class="navigation">
+            <a href="HOME.html"><button class="nav-button active">🏠</button></a>
+            <!-- <button class="nav-button">🏆</button> -->
+            <a href="B.html"> <button class="nav-button">📈</button> </a>
+            <button class="nav-button">⚙️</button>
+        </nav>
+    </div>
+
+    <script>
+        // Fetch data from Firebase and update chart and footprint display
+        fetchFootprintData().then(data => {
+            const labels = data.map(entry => entry.month);
+            const values = data.map(entry => entry.value);
+            const totalEmission = values.reduce((acc, val) => acc + val, 0);
+
+            document.getElementById('totalEmission').textContent = totalEmission.toFixed(1);
+
+            const ctx = document.getElementById('footprintChart').getContext('2d');
+            const footprintChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Carbon Footprint',
+                        data: values,
+                        borderColor: 'rgba(255, 255, 255, 0.8)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            display: false,
+                            grid: {
+                                display: false
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false,
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.8)'
+                            }
+                        }
+                    },
+                    elements: {
+                        point: {
+                            radius: 4,
+                            hoverRadius: 8,
+                            backgroundColor: 'white',
+                            borderColor: 'rgba(255, 255, 255, 0.8)'
+                        }
+                    }
+                }
+            });
+        });
+
+        // Initialize Firebase Authentication
+        firebase.auth().onAuthStateChanged(user => {
+            if (user) {
+                document.getElementById('userName').textContent = `Hello, ${getUserName()}`;
+            } else {
+                document.getElementById('userName').textContent = 'Hello, Guest';
+            }
+        });
+
+        // Navigation interaction
+        const navButtons = document.querySelectorAll('.nav-button');
+        navButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                navButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

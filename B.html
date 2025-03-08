@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emissions Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2E7D32;
+            --secondary-color: #A5D6A7;
+            --bg-color: #F5F7F5;
+            --card-bg: #FFFFFF;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .dashboard-header {
+            background-color: var(--card-bg);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .title-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .title-section h1 {
+            font-size: 32px;
+            color: var(--primary-color);
+        }
+
+        .date-navigation {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background-color: var(--bg-color);
+            padding: 12px 24px;
+            border-radius: 12px;
+        }
+
+        .nav-button {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--primary-color);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: background-color 0.3s;
+        }
+
+        .nav-button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .current-date {
+            font-size: 20px;
+            font-weight: 500;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 80px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        }
+
+        .total-emissions {
+            text-align: center;
+            padding: 32px;
+            background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+            color: white;
+            border-radius: 16px;
+            margin-bottom: 24px;
+        }
+
+        .total-emissions h2 {
+            font-size: 48px;
+            margin: 16px 0;
+        }
+
+        .emissions-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .emission-item {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            border-radius: 12px;
+            background-color: var(--bg-color);
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .emission-item:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .emission-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 16px;
+            font-size: 24px;
+        }
+
+        .emission-details {
+            flex-grow: 1;
+        }
+
+        .emission-category {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .emission-value {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .chart-container {
+            height: 300px;
+            margin-top: 24px;
+        }
+
+        .tab-container {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .tab-button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab-button.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .tab-button:hover:not(.active) {
+            background-color: var(--secondary-color);
+        }
+
+        .nav-container {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+        }
+
+        .navigation {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            display: flex;
+            gap: 2rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-button {
+            background: none;
+            border: none;
+            color: var(--light-green);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .nav-button::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%) scaleX(0);
+            width: 20px;
+            height: 3px;
+            background: var(--accent-green);
+            border-radius: 2px;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-button:hover {
+            color: white;
+            transform: translateY(-3px);
+        }
+
+        .nav-button.active {
+            color: white;
+        }
+
+        .nav-button.active::after {
+            transform: translateX(-50%) scaleX(1);
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .title-section h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="dashboard-header">
+            <div class="title-section">
+                <h1>Emissions Dashboard</h1>
+                <div class="date-navigation">
+                    <button class="nav-button" id="prevMonth">←</button>
+                    <span class="current-date">July 2022</span>
+                    <button class="nav-button" id="nextMonth">→</button>
+                </div>
+            </div>
+            <div class="total-emissions">
+                <h3>Total Emissions</h3>
+                <h2 id="total-emissions-value">0 ton</h2>
+                <p>CO₂ equivalent</p>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3>Emissions Breakdown</h3>
+                <div class="chart-container">
+                    <canvas id="breakdownChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="tab-container">
+                    <button class="tab-button active" id="daily-btn">Daily</button>
+                    <button class="tab-button" id="weekly-btn">Weekly</button>
+                    <button class="tab-button" id="monthly-btn">Monthly</button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Categories</h3>
+                <div class="emissions-list">
+                    <div class="emission-item">
+                        <div class="emission-icon">🛍️</div>
+                        <div class="emission-details">
+                            <div class="emission-category">AC</div>
+                            <div class="emission-value" id="purchase-emission">0 ton</div>
+                        </div>
+                    </div>
+                    <div class="emission-item">
+                        <div class="emission-icon">🚗</div>
+                        <div class="emission-details">
+                            <div class="emission-category">Lights & Fan</div>
+                            <div class="emission-value" id="petrol-emission">0 ton</div>
+                        </div>
+                    </div>
+                    <div class="emission-item">
+                        <div class="emission-icon">⚡</div>
+                        <div class="emission-details">
+                            <div class="emission-category">Electricity</div>
+                            <div class="emission-value" id="electricity-emission">0 ton</div>
+                        </div>
+                    </div>
+                    <div class="emission-item">
+                        <div class="emission-icon">🍽️</div>
+                        <div class="emission-details">
+                            <div class="emission-category">Food</div>
+                            <div class="emission-value" id="food-emission">0 ton</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="nav-container">
+      <nav class="navigation">
+         <a href="HOME.html"> <button class="nav-button">🏠</button></a>
+          <!-- <button class="nav-button">🏆</button> -->
+          <button class="nav-button active">📈</button>
+          <button class="nav-button">⚙️</button>
+      </nav>
+  </div>
+
+
+    <script>
+        // Initialize Charts
+        const breakdownCtx = document.getElementById('breakdownChart').getContext('2d');
+        const trendCtx = document.getElementById('trendChart').getContext('2d');
+
+        // Breakdown Donut Chart
+        new Chart(breakdownCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Purchase', 'Petrol', 'Electricity', 'Food'],
+                datasets: [{
+                    data: [21, 45, 12, 9],
+                    backgroundColor: [
+                        '#A5D6A7',
+                        '#2E7D32',
+                        '#81C784',
+                        '#43A047'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                },
+                cutout: '70%'
+            }
+        });
+
+        // Trend Line Chart
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                datasets: [{
+                    label: 'Daily Emissions',
+                    data: [2.1, 1.8, 2.3, 1.9, 2.0, 1.7, 2.2],
+                    borderColor: '#2E7D32',
+                    backgroundColor: 'rgba(46, 125, 50, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Tab Switching
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                button.classList.add('active');
+            });
+        });
+
+        // Emission Items Interaction
+        document.querySelectorAll('.emission-item').forEach(item => {
+            item.addEventListener('click', () => {
+                item.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    item.style.transform = 'scale(1)';
+                }, 100);
+            });
+        });
+
+        // Navigation Buttons
+             
+              const navButtons = document.querySelectorAll('.nav-button');
+          navButtons.forEach(button => {
+              button.addEventListener('click', () => {
+                  navButtons.forEach(btn => btn.classList.remove('active'));
+                  button.classList.add('active');
+              });
+          });
+    </script>
+
+    <script src="B.js"></script>
+</body>
+</html>
